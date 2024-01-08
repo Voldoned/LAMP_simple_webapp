@@ -1,0 +1,61 @@
+version: '3.7'
+
+services:
+
+  app:
+    image: yumechang/apache24_php82
+    build: 
+      context: .
+      dockerfile: ./docker/server/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    depends_on:
+      - mysql
+    container_name: app
+    networks:
+       - app-network
+
+  mysql:
+    image: mysql:5.7
+    build: 
+      context: .
+      dockerfile: ./docker/db/Dockerfile
+    restart: always
+    environment:
+      MYSQL_DATABASE: "test_database"
+      MYSQL_USER: "laravel_user"
+      MYSQL_PASSWORD: "laravel_password"
+      MYSQL_ROOT_PASSWORD: "Nederkinvovavoldoned2000"
+    container_name: db
+    networks:
+      - app-network
+
+  tests_python:
+    image: python:3.10
+    build: 
+      context: .
+      dockerfile: ./docker/python-tests/Dockerfile
+    depends_on:
+      - app
+    container_name: tests_python
+    networks:
+      - app-network
+
+  tests_locust:
+    image: locustio/locust
+    build: 
+      context: .
+      dockerfile: ./docker/locust/Dockerfile
+    volumes:
+      - ./tests_locust/locust_out:/mnt/locust/locust_out
+    depends_on:
+      - app
+    container_name: tests_locust
+    networks:
+      - app-network
+    command: -f /mnt/locust/locustfile.py --config=/mnt/locust/locust_test.conf
+
+networks:
+  app-network:
+    name: mynet
